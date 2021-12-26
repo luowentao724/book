@@ -1,0 +1,7 @@
+/out/
+/.idea/
+/lib/
+/.vscode/
+/dist/
+/node_modules/
+*.iml

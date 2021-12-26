@@ -266,10 +266,51 @@ function calculateOutstanding(invoice){
 曾用名：内联函数（Inline Method）
 反向重构：提炼函数（106）
 * 动机
-    1. 某些函数，其内部代码和函数名称一样清晰易读。此时应该去掉该函数，直接使用其中代码。(范例一)
+    1. 某些函数，其内部代码和函数名称一样清晰易读。此时应该去掉该数，直接使用其中代码。(范例一)
     2. 手上有一群组织不合理的函数。可以将他们都内联到一个大函数中，再以我喜欢的方式提炼出小函数。
+* 做法
+ > 1. 检查函数，确定它不具有多态性（该函数所在的类不具有继承关系）
+ > 2. 找出这个函数的所有调用点
+ > 3. 将这个函数的所有调用点都替换为函数本体
+ > 4. 每次替换后，执行测试。
+ > 5. 删除该函数的定义
+ > 6. 测试
+ 
+需提炼的函数(一)
+```
+function rating(aDriver) {
+    return moreThanFiveLateDeliveries(aDrive) ? 2 : 1;
+}
+function moreThanFiveLateDeliveries(aDriver) {
+    return aDriver.numberOfLateDeliveries > 5;
+}
 
+// 提炼后代码
+function rating(aDriver) {
+    return (aDriver.numberOfLateDeliveries > 5) ? 2 : 1;
+}
 
-    
+```
+
+需提炼的函数(二)
+```
+function reportLines(aCustomer) {
+    const lines = [];
+    gatherCustomerData(lines,aCustomer);
+    return lines;
+}
+function gatherCustomer(out,aCustomer){
+    out.push(["name", aCustomer.name])
+    out.push(["location", aCustomer.location])
+}
+
+// 提炼后代码
+function reportLines(aCustomer) {
+    const lines = [];
+    lines.push(["name", aCustomer.name])
+    lines.push(["location", aCustomer.location])
+    return lines;
+}
+```
   
 
