@@ -1,0 +1,35 @@
+{
+    // 使用 IntelliSense 了解相关属性。 
+    // 悬停以查看现有属性的描述。
+    // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "type": "module",   //加上这个
+    "configurations": [
+        {
+            "type": "pwa-chrome",
+            "request": "launch",
+            "name": "Launch Chrome against localhost",
+            "url": "http://localhost:8080",
+            "webRoot": "chapter1"
+        }
+    ],
+    "editor.fontSize": 18,
+    "files.associations": {
+        "*.es": "javascript",
+        "*.es6": "javascript"
+    },
+    // 控制编辑器是否应呈现空白字符
+    "editor.renderWhitespace": true,
+    // 启用后，将在保存文件时剪裁尾随空格。
+    "files.trimTrailingWhitespace": true,
+    // File extensions that can be beautified as javascript or JSON.
+    "beautify.JSfiles": [
+        "",
+        "es",
+        "es6",
+        "js",
+        "json",
+        "jsbeautifyrc",
+        "jshintrc"
+    ]
+}
