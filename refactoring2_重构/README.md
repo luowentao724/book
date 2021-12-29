@@ -312,5 +312,188 @@ function reportLines(aCustomer) {
     return lines;
 }
 ```
-  
 
+### 提炼变量（Extract Variable）
+曾用名：引入解释性变量（Introduce Explaining Variable）  
+反向重构：内联变量
+
+* 动机
+    1. 表达式非常复杂而难以阅读的情况。
+* 做法
+    1. 确认要提炼的表达式没有副作用
+    2. 声明一个不可修改的变量，把你想要提炼的表达式复制一份，以该表达式的结果值给这个变量赋值
+    3. 用这个新变量取代原来的表达式
+    4. 测试
+
+需提炼的函数(一)
+```
+class Order {
+    constructor(aRecord) {
+        this._data = aRecord;
+    }
+
+    get quantity() {
+        return this._data.quantity;
+    }
+
+    get itemPrice() {
+        return this._data.itemPrice;
+    }
+
+    get price() {
+        return this.quantity * this.itemPrice - 
+        Math.max(0, this.quantity - 500) * this.itemPrice * 0.05 +
+        Math.min(this.quantity * this.itemPice * 0.1, 100);
+    }
+
+}
+
+// 提炼后代码
+class Order {
+    constructor(aRecord) {
+        this._data = aRecord;
+    }
+
+    get quantity() {
+        return this._data.quantity;
+    }
+
+    get itemPrice() {
+        return this._data.itemPrice;
+    }
+
+    get price() {
+        return this.basePrice - 
+        this.quantityDiscount +
+        this.shipping;
+    }
+
+    get basePrice() {
+        return this.quantity * this.itemPrice;
+    }
+
+    get quantityDiscount() {
+        return Math.max(0, this.quantity - 500) * this.itemPrice * 0.05;
+    }
+
+    get shipping() {
+        return Math.min(this.quantity * this.itemPice * 0.1, 100);
+    }
+
+}
+
+```
+
+### 内联变量（Inline Variable）
+曾用名：内联临时变量（Inline temp）
+反向重构：提炼变量
+```
+let basePrice = anOrder.basePrice;
+return (basePrice > 1000)
+
+// 内联
+return anOrder.basePrice > 1000;
+```
+* 动机： 当变量不能给表达式提供有意义的名字时 或 这个名字并不必表达式本身更具表现力
+* 做法：
+    1. 检查确认变量赋值语句的右侧表达式没有副作用
+    2. 如果变量没有被声明为不可修改，先将其变为不可修改，并执行测试。
+    3. 测试
+    4. 重复前面两步，逐一替换其他所有使用该变量的地方。
+    删除该变量的声明点和赋值语句。
+    5. 测试
+
+### 改变函数声明（Change Function Declaration）
+别名：函数改名 （Rename Function）
+曾用名：函数改名（Rename Method）
+曾用名：添加参数（Add Parameter）
+曾用名：已出参数（Remove Parameter）
+曾用名：修改签名（Change Signature）
+
+* 动机
+    1. 当看一个函数的名称无法搞清楚其中到底在干什么时，此时就应该改变
+
+* 做法 - 简单做法
+    1. 如果想要移除一个参数，需要先确定函数体内也没有使用该参数
+    2. 修改函数声明，使其称为你期望的状态。
+    3. 找出所有使用旧函数声明的地方，将它们改为新函数声明。
+    4. 测试
+* 做法 - 迁移式做法
+    1. 如果有必要的话，先对函数体内部加以重构，使后面的提炼步骤易于开展。
+    2. 使用提炼函数将函数体提炼成一个新函数
+    3. 如果提炼出来的函数需要新增参数，用前面的简单做法添加即可。
+    4. 测试。
+    5. 对旧函数使用内联函数
+    6. 如果新函数使用了临时的名字，再次使用改变函数声明将其改回原来的名字。
+    7. 测试
+
+```
+// 添加参数
+class Book {
+    addReservation(customer) {
+        this._reservations.push(customer);
+    }
+
+    // 提炼函数 和 内联函数
+    addReservation(customer) {
+      this.zz_addReservation(customer);
+    }
+
+    zz_addReservation(customer) {
+        this._reservations.push(customer);
+    }
+
+}
+
+// 重构后
+class Book {
+    
+    // 提炼函数 和 内联函数
+    addReservation(customer) {
+      this.zz_addReservation(customer, false);
+    }
+
+    zz_addReservation(customer,isPriority) {
+        assert(isPriority === true || isPriotity === false);
+        this._reservations.push(customer);
+    }
+
+}
+
+
+// 范例：把参数改为属性
+function inNewEngland(aCustomer) {
+    return ["MA","CT","ME","VT","NH","RI"].includes(aCustomer.address.state);
+}
+//调用方
+const newEnglanders = someCustomers.filter(c => inNewEnglan(c));
+
+重构：提炼变量
+function inNewEngland(aCustomer) {
+    const stateCode = aCustomer.address.state
+    return ["MA","CT","ME","VT","NH","RI"].includes(stateCode);
+}
+重构：提炼函数
+function inNewEngland(aCustomer) {
+    const stateCode = aCustomer.address.state
+    return xxNEWinNewEngland(stateCode);
+}
+
+function xxNEWinNewEngland(stateCode) {
+    return ["MA","CT","ME","VT","NH","RI"].includes(stateCode);
+}
+
+//重构：内联变量
+function inNewEngland(aCustomer){
+    return xxNEWinNewEngland(aCustomer.address.state)
+}
+
+//调用方
+const newEnglanders = someCustomers.filter(c => xxNEWinNewEngland(c.address.state));
+
+
+function inNewEngland(stateCode) {
+    return ["MA","CT","ME","VT","NH","RI"].includes(stateCode);
+}
+const newEnglanders = someCustomers.filter(c => inNewEngland(c.address.state));
+```
