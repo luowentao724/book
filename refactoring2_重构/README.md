@@ -497,3 +497,261 @@ function inNewEngland(stateCode) {
 }
 const newEnglanders = someCustomers.filter(c => inNewEngland(c.address.state));
 ```
+
+### 封装变量 Encapsulate Variable
+曾用名：自封装字段 （Self-Encapsulate Field）
+曾用名：封装字段（Encapsulate Field）
+
+```
+let defaultOwner = {firstName: "Martin", lastName: "Fowler"}
+
+重构后
+let defaultOwner = {firstName: "Martin", lastName: "Fowler"}
+export function defaultOwner() {return defaultOwner};
+export function setDefaultOwner(arg) {defaultOwnerData = arg}
+```
+
+* 动机
+    1. 调整程序中的元素时，函数相对容易调整一些，因为函数只有一个用法，就是调用
+    2. 数据麻烦的多，因为没办法设计这样的转发机制
+    3. 如果要搬移一处被广泛使用的数据，最好的办法往往是先以函数形式封装所有对该数据的访问。
+* 做法
+    1. 创建封装函数，在其中访问和更新变量值。
+    2. 执行静态检查
+    3. 逐一修改使用该变量的代码，将其改为调用合适的封装函数，每次替换之后，执行测试。
+    4. 限制变量的可见性
+    5. 测试
+    6. 如果变量的值是一个记录，考虑使用封装记录
+    
+### 引入参数对象（Introduce Paramerter Object）
+
+```
+function amountInvoiced(startDate, endDate) {}
+function amountReceived(startDate, endDate) {}
+function amountOverdue(startDate, endDate) {}
+// 重构后
+function amountOverdue(aDateRange) {}
+function amountReceived(aDateRange) {}
+function amountOverdue(aDateRange) {}
+```
+* 动机
+    1. 当一组数据项常常结伴而行，频繁出现在函数中。
+    2. 可以让数据项之间的关系变得清晰
+* 做法
+    1. 如果暂时还没有一个合适的数据结构，就创建一个
+    2. 测试
+    3. 使用改变函数声明给原来的函数新增一个参数，类型是新增的数据结构
+    4. 测试
+    5. 调整所有调用者，传入新数据结构的适当示例。每修改一处，执行测试。
+    6. 用新数据结构中的每项元素，逐一取代参数列表中与之对应的参数项，然后删除原来的参数，测试。
+* 示例
+```
+const station = {
+    name: "ZB1",
+    readings:[
+        {temp:47,time: "2016-11-10 09:10"},
+        {temp:53,time: "2016-11-10 09:20"},
+        {temp:58,time: "2016-11-10 09:30"},
+        {temp:53,time: "2016-11-10 09:40"},
+        {temp:51,time: "2016-11-10 09:50"},
+    ]
+}
+
+function readingsOutsdeRange(station, min , max) {
+    return station.readings.filter(r => r.temp < min || r.temp > max);
+}
+
+调用方
+alerts = readingsOutsideRange(station, operatingPlan.temperatureFloor,operatingPlan.temperatureCeiling);
+
+// 1. 首先为要组合的数据声明一个类
+class NumberRange {
+    constructor(min, max) {
+        this._data = {min : min,max : max};
+    }
+    get min(){return this._data.min;}
+    get max(){return this._data.max;}
+}
+
+// 2. 运用改变函数声明（124） ，把新的对象作为参数传给 readingsOutsideRange
+function readingsOutsideRange(station ,mix ,max, range) {
+    return station.readings.filter(r => r.temp < min || r.temp > max);
+}
+//调用方
+const range = new NUmberRange( operatingPlan.temperatureFloor,operatingPlan.temperatureCeiling)
+alerts = readingsOutsideRange(station,operatingPlan.temperatureFloor,operatingPlan.temperatureCeiling, range);
+
+// 3. 修改使用参数的代码,先从最大值开始 
+function readingsOutsideRange(station ,mix , range) {
+    return station.readings.filter(r => r.temp < min || r.temp > range.max);
+}
+// 调用方
+const range = new NUmberRange( operatingPlan.temperatureFloor,operatingPlan.temperatureCeiling)
+alerts = readingsOutsideRange(station,operatingPlan.temperatureFloor, range);
+
+// 4. 修改最小值 
+function readingsOutsideRange(station , range) {
+    return station.readings.filter(r => r.temp < range.min || r.temp > range.max);
+}
+// 调用方
+const range = new NUmberRange( operatingPlan.temperatureFloor,operatingPlan.temperatureCeiling)
+alerts = readingsOutsideRange(station, range);
+
+// 5. 将条件对比搬移到NumberRange 类中
+class NumberRange {
+    constructor(min, max) {
+        this._data = {min : min,max : max};
+    }
+    get min(){return this._data.min;}
+    get max(){return this._data.max;}
+    contains(arg) {
+        return (arg >= this.min && arg <= this.max;)
+    }
+}
+
+function readingsOutsideRange(station , range) {
+    return station.readings.filter(r => !range.contains(r.temp));
+}
+```
+
+### 函数组合成类 （Combine Functions into Class）
+* 动机 
+    1. 如果发现一组函数行影不离的操作同一块数据。
+* 做法
+    1. 运用封装记录对多个函数共用的数据记录加以封装
+    2. 对于使用该记录结构的每个函数，运用搬移函数将其移入新类
+    3. 用以处理该数据记录的逻辑可以用提炼函数提炼出来，并引入新类
+* 示例
+```
+function base(aReading){};
+function taxableCharge(aReading){};
+function calculateBaseCharge(aReading){};
+
+class Reading {
+    base() {}
+    taxableCharge() {}
+    calculateBaseCharge() {}
+}
+```
+
+# 函数组合成变换（Combine Functions into Transform）
+* 动机 
+    1. 当经常需要把数据给一个方法，然后由该方法计算出附加信息，附加信息会在几个不同的地方用到时。
+* 做法
+    1. 创建一个变换函数，输入参数是需要变换的记录，并直接返回该记录的值。
+    2. 挑选一块逻辑，将其主体移入变换函数中，把结果作为字段添加到输出记录中。修改客户端代码令其使用这个新字段。
+    3. 测试
+    4. 针对其他相关计算逻辑，重复上诉步骤
+* 范例
+```
+function base(aReading){}
+function taxableCharge(aRdading){}
+
+// 重构后
+function enrichReading(argReading) {
+    const aReading = _.cloneDeep(argReading);
+    aReading.baseCharge = base(aReading);
+    aReading.texableCharge = texableCharge(aReading);
+    return aReading;
+}
+```
+### 拆分阶段（Split Phase）
+* 动机
+    1. 每当看见一段代码在同时处理两件不同的事。
+* 做法
+    1. 将第二阶段的代码提炼成独立的函数
+    2. 测试。
+    3. 引入一个中转数据结构，将其作为参数添加到提炼出的新函数的参数列表中。
+    4. 测试
+    5. 逐一检查提炼出的“第二阶段函数” 的每个参数。如果某个参数被第一阶段用到，将将其移入中转数据结构。测试。
+    6. 对第一阶段的代码运用提炼函数，让提炼出的函数返回中转数据结构。
+* 示例
+```
+function priceOrder(product,quantity,shippingMethod) {
+    const basePrice = product.basePrice * quantity;
+    const discount = Math.max(quantity - product.discountThreshold, 0)
+                        * product.basePrice * product.discountRate;
+    const shippingPerCase  = （basePrice > shippingMethod.discountThreshold) ? shippingMethod.discountFee : shippingMethod.feePerCase;
+    const shippingCost = quantity * shippingPerCase;
+    const price = basePrice - discount + shippingCost;
+    return price;
+}
+
+// 重构 1
+function priceOrder(product,quantity,shippingMethod) {
+    const basePrice = product.basePrice * quantity;
+    const discount = Math.max(quantity - product.discountThreshold, 0)
+                        * product.basePrice * product.discountRate;
+    const price = applyShipping(basePrice,shippingMethod,quantity,discount);
+    return price;
+}
+
+function applyShipping(basePrice,shippingMethod,quantity,discount) {
+    const shippingPerCase  = （basePrice > shippingMethod.discountThreshold) ? shippingMethod.discountFee : shippingMethod.feePerCase;
+    const shippingCost = quantity * shippingPerCase;
+    return basePrice - discount + shippingCost;
+}
+
+// 重构 2 
+function priceOrder(product,quantity,shippingMethod) {
+    const basePrice = product.basePrice * quantity;
+    const discount = Math.max(quantity - product.discountThreshold, 0)
+                        * product.basePrice * product.discountRate;
+    const priceData = {};
+    const price = applyShipping(priceData,basePrice,shippingMethod,quantity,discount);
+    return price;
+}
+
+function applyShipping(priceData,basePrice,shippingMethod,quantity,discount) {
+    const shippingPerCase  = （basePrice > shippingMethod.discountThreshold) ? shippingMethod.discountFee : shippingMethod.feePerCase;
+    const shippingCost = quantity * shippingPerCase;
+    return basePrice - discount + shippingCost;
+}
+
+// 重构3 
+function priceOrder(product,quantity,shippingMethod) {
+    const basePrice = product.basePrice * quantity;
+    const discount = Math.max(quantity - product.discountThreshold, 0)
+                        * product.basePrice * product.discountRate;
+    const priceData = {basePrice : basePrice, quantity: quantity,discount: discount};
+    const price = applyShipping(priceData,shippingMethod);
+    return price;
+}
+
+function applyShipping(priceData,shippingMethod) {
+    const shippingPerCase  = （priceData.basePrice > shippingMethod.discountThreshold) 
+    ? shippingMethod.discountFee : shippingMethod.feePerCase;
+    const shippingCost = priceData.quantity * shippingPerCase;
+    return priceData.basePrice - priceData.discount + shippingCost;
+}
+
+// 重构4 
+function priceOrder(product,quantity,shippingMethod) {
+    const priceData = calculatePricingData(product,quantity);
+    const price = applyShipping(priceData,shippingMethod);
+    return price;
+}
+
+function calculatePricingData(product, quantity) {
+    const basePrice = product.basePrice * quantity;
+    const discount = Math.max(quantity - product.discountThreshold, 0)
+                        * product.basePrice * product.discountRate;
+    return {basePrice : basePrice, quantity: quantity,discount: discount};
+    
+}
+
+function applyShipping(priceData,shippingMethod) {
+    const shippingPerCase  = （priceData.basePrice > shippingMethod.discountThreshold) 
+    ? shippingMethod.discountFee : shippingMethod.feePerCase;
+    const shippingCost = priceData.quantity * shippingPerCase;
+    return priceData.basePrice - priceData.discount + shippingCost;
+}
+
+// 重构5
+function priceOrder(product,quantity,shippingMethod) {
+    const priceData = calculatePricingData(product,quantity);
+    return applyShipping(priceData,shippingMethod);
+}
+
+
+```
