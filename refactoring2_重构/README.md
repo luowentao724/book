@@ -755,3 +755,10 @@ function priceOrder(product,quantity,shippingMethod) {
 
 
 ```
+
+## 第七章 封装
+
+### 封装变量
+
+### 封装集合
+
